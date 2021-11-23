@@ -116,6 +116,7 @@ func FtpThread(pid chan chan ClientChan, nis chan chan ClientChan) {
 	}
 }
 
+// Actions(s) = s |> {get: Actions<s> [] put: Actions<s> [] bye: 0}
 func Actions(actAlts []chan int) {
 	fmt.Println("Actions: Interacting...")
 	for {
@@ -132,6 +133,7 @@ func Actions(actAlts []chan int) {
 
 }
 
+// Authenticator(nis) = !nis(x).x(userid,passwd).if passwd=pw then x<|valid.0 else x<|invalid.0
 func Authenticator(nis chan chan ClientChan) {
 	fmt.Printf("Authenticator: Initiating nis=%p\n", nis)
 	for {
