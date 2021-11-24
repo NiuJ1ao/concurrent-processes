@@ -10,6 +10,7 @@ func delay() {
 	time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
 }
 
+// [[u<v>.P]]= (νc)(u<c>|c(y).(y<v>|[[P]]))
 func sync_send(u chan chan chan int, v int) {
 	c := make(chan chan int, 1) // (nu c)
 	fmt.Printf("send: (nu c = %d)\n", c)
