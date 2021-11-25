@@ -1,3 +1,6 @@
+/*
+ */
+
 package main
 
 import (
@@ -12,22 +15,17 @@ type ClientAccount struct {
 }
 
 type ClientChan struct {
-	login    ClientAccount
-	authAlts []chan int
-	actAlts  []chan int
+	loginInfo ClientAccount
+	authAlts  []chan int
+	actAlts   []chan int
 }
 
-// Client(pid) = (νs) pid<s>.s<userid,passwd>.s|>{sorry: ...[] welcome: ...}
-func Client(pid chan chan ClientChan, wg sync.WaitGroup) {
-	// defer wg.Done()
+// Client(pid) = (νs) pid<s>.s<userid,passwd>.s|>{sorry: 0 [] welcome: s <| get.s <| get.s <| get.s <| put.s <| put.s <| put.s <| bye}
+func Client(pid chan chan ClientChan, loginInfo ClientAccount) {
 	fmt.Printf("Client: Initiating pid=%p\n", pid)
-	userid := "userid"
-	passwd := "pw"
-	s := make(chan ClientChan)
+	s := make(chan ClientChan) // (νs)
 	fmt.Println("Client: Channel s=", s)
-	login := ClientAccount{userid, passwd}
-
-	pid <- s
+	pid <- s // pid<s>
 	fmt.Printf("Client: pid=%p <- s=%p\n", pid, s)
 
 	// authentication branching
@@ -41,20 +39,20 @@ func Client(pid chan chan ClientChan, wg sync.WaitGroup) {
 		make(chan int), // put
 		make(chan int), // bye,
 	}
-	s <- ClientChan{
-		login:    login,
-		authAlts: authAlts,
-		actAlts:  actAlts,
+	s <- ClientChan{ // s<userid,passwd>
+		loginInfo: loginInfo,
+		authAlts:  authAlts,
+		actAlts:   actAlts,
 	}
 	fmt.Printf("Client: s=%p <- ClientChan\n", s)
 
 	fmt.Println("Client: Waiting for response...")
-	select {
-	case <-authAlts[0]:
+	select { //s|>{sorry: ... [] welcome: ...}
+	case <-authAlts[0]: // sorry: 0
 		fmt.Println("Client: Sorry! User ID or password is incorrect.")
-	case <-authAlts[1]:
+	case <-authAlts[1]: // welcome: s <| get.s <| get.s <| get.s <| put.s <| put.s <| put.s <| bye
 		fmt.Println()
-		fmt.Println("Client: Welcome!")
+		fmt.Printf("Client: Welcome, %s!\n", loginInfo.userid)
 		var r int
 		actAlts[0] <- r
 		actAlts[0] <- r
@@ -69,8 +67,8 @@ func Client(pid chan chan ClientChan, wg sync.WaitGroup) {
 
 // Init(pid, nis) = FtpThread<pid, nis> | Authenticator<nis>
 func Init(pid chan chan ClientChan, nis chan chan ClientChan) {
-	go FtpThread(pid, nis)
-	go Authenticator(nis)
+	go FtpThread(pid, nis) // FtpThread<pid, nis>
+	go Authenticator(nis)  // Authenticator<nis>
 }
 
 // FtpThread(pid, nis) = !pid(z).z(userid, passwd).(νs')nis<s'>.s'<userid, passwd>.
@@ -78,16 +76,16 @@ func Init(pid chan chan ClientChan, nis chan chan ClientChan) {
 func FtpThread(pid chan chan ClientChan, nis chan chan ClientChan) {
 	fmt.Printf("FtpThread: Initiating pid=%p, nis=%p\n", pid, nis)
 	for {
-		z := <-pid
+		z := <-pid // pid(z)
 		fmt.Printf("FtpThread: z=%p <- pid=%p\n", z, pid)
 		clientChan := <-z
 		fmt.Printf("FtpThread: clientChan <- z=%p\n", z)
-		login := clientChan.login
-		fmt.Printf("FtpThread: id=%s, pw=%s\n", login.userid, login.passwd)
+		loginInfo := clientChan.loginInfo // z(userid, passwd)
+		fmt.Printf("FtpThread: id=%s, pw=%s\n", loginInfo.userid, loginInfo.passwd)
 
-		s := make(chan ClientChan)
+		s := make(chan ClientChan) // (νs')
 		fmt.Println("FtpThread: Channel s'=", s)
-		nis <- s
+		nis <- s // nis<s'>
 		fmt.Printf("FtpThread: nis=%p <- s'=%p\n", nis, s)
 
 		// branching
@@ -95,19 +93,19 @@ func FtpThread(pid chan chan ClientChan, nis chan chan ClientChan) {
 			make(chan int), // invalid
 			make(chan int), // valid
 		}
-		s <- ClientChan{
-			login:    login,
-			authAlts: authAlts,
+		s <- ClientChan{ // s'<userid, passwd>
+			loginInfo: loginInfo,
+			authAlts:  authAlts,
 		}
 		fmt.Printf("FtpThread: s'=%p <- ClientChan\n", s)
 
 		fmt.Println("FtpThread: Waiting for response...")
-		select {
-		case r := <-authAlts[0]:
+		select { // s'|>{invalid : ... [] valid: ...}
+		case r := <-authAlts[0]: // invalid : z<|sorry.0
 			fmt.Printf("FtpThread: Invalid selected %p\n", authAlts[0])
 			clientChan.authAlts[0] <- r
 			fmt.Printf("FtpThread: Select sorry %p\n", clientChan.authAlts[0])
-		case r := <-authAlts[1]:
+		case r := <-authAlts[1]: // valid: z <| welcome.Actions<z>
 			fmt.Printf("FtpThread: Valid selected %p\n", authAlts[1])
 			clientChan.authAlts[1] <- r
 			fmt.Printf("FtpThread: Select welcome %p\n", clientChan.authAlts[1])
@@ -130,21 +128,20 @@ func Actions(actAlts []chan int) {
 			return
 		}
 	}
-
 }
 
 // Authenticator(nis) = !nis(x).x(userid,passwd).if passwd=pw then x<|valid.0 else x<|invalid.0
 func Authenticator(nis chan chan ClientChan) {
 	fmt.Printf("Authenticator: Initiating nis=%p\n", nis)
 	for {
-		x := <-nis
+		x := <-nis // nis(x)
 		fmt.Printf("Authenticator: x=%x <- nis=%p\n", x, nis)
 		clientChan := <-x
 		fmt.Printf("Authenticator: ClientChan <- x=%p\n", x)
-		login := clientChan.login
-		fmt.Printf("Authenticator: id=%s, pw=%s\n", login.userid, login.passwd)
+		loginInfo := clientChan.loginInfo // x(userid,passwd)
+		fmt.Printf("Authenticator: id=%s, pw=%s\n", loginInfo.userid, loginInfo.passwd)
 
-		if login.userid == "userid" && login.passwd == "pw" {
+		if loginInfo.userid == "userid" && loginInfo.passwd == "pw" { // if ... then ... else ...
 			var r int
 			clientChan.authAlts[1] <- r
 			fmt.Printf("Authenticator: Select valid %p\n", clientChan.authAlts[1])
@@ -158,13 +155,16 @@ func Authenticator(nis chan chan ClientChan) {
 
 func main() {
 	var wg sync.WaitGroup
-
 	pid := make(chan chan ClientChan)
 	nis := make(chan chan ClientChan)
 	Init(pid, nis)
 
-	// wg.Add(1)
-	Client(pid, wg)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		Client(pid, ClientAccount{"userid", "pw"}) // should print: 'Client: Welcome, userid!'
+	}()
+	Client(pid, ClientAccount{"userid1", "pw1"})
 
 	wg.Wait()
 	fmt.Println("Exiting")
