@@ -1,4 +1,19 @@
 /*
+ * In this question, we input a list of three integers as example (it is also compatible with different size).
+ * Since there always is a receiver if there is a sender, we only count the number of senders for messages.
+ * In this case, the indirect encoding requires 10 channels and 13 messages, where the direct encoding only
+ * requires 5 channels and 7 messages.
+ * Channels:
+ * 		For indirect sender, it requires a private channel of every variable and a extra channel
+ * 		for the first sender created in the polyadic synchronization, in the monatic synchronization to
+ * 		monatic asynchronization encoding (n + 1), whereas the direct sender only needs one private channel.
+ * 		For indrect receiver, it also require a extra channle for the first receiver in the polyadic synchronization (1).
+ *		In this case, delta = 3 + 1 + 1 = 5 is matched.
+ * Messages:
+ *		For indirect sender, it requires sends for channels of every variable. For the first send of private channel
+ * 		in the polyadic synchronization, two more sends are required than direct encoding (n + 2).
+ * 		For direct receiver, send a extra message for first receiver (1).
+ *		In this case, delta = 3 + 2 + 1 = 6 is matched.
  */
 
 package main
@@ -11,9 +26,9 @@ import (
 
 var chan_counter, msg_counter uint32
 
-/*************************************************
- ****************Direct Encoding******************
- *************************************************/
+/***************************************************
+ **************** Direct Encoding ******************
+ ***************************************************/
 // [[u<v1,v2,v3>.P]]=(νc)u<c>|c(y1).(y1<v1>|c(y2).(y2<v2>|c(y3).(y3<v3>|[[P]])))
 func directSendPolySync(u chan chan chan int, vs []int) {
 	c := make(chan chan int, 1) // (νc)
@@ -76,9 +91,9 @@ func directEncoding(vs []int) {
 	}
 }
 
-/*************************************************
- ****************Indirect Encoding****************
- *************************************************/
+/***************************************************
+ **************** Indirect Encoding ****************
+ ***************************************************/
 // [[u<v>.P]]= (νc)(u<c>|c(y).(y<v>|[[P]]))
 func sendMonaValSync(u chan chan chan int, v int) {
 	c := make(chan chan int, 1) // (νc)
@@ -133,8 +148,7 @@ func sendPolySync(u chan chan chan chan chan chan int, vs []int) {
 	atomic.AddUint32(&chan_counter, 1)
 	fmt.Printf("sendPolySync: (nu c=%p)\n", c)
 
-	// u <- c // u<c>
-	sendMonaChanSync(u, c)
+	sendMonaChanSync(u, c) // u<c>
 	atomic.AddUint32(&msg_counter, 1)
 	fmt.Printf("sendPolySync: u=%p <- c=%p\n", u, c)
 
@@ -190,8 +204,7 @@ func recvMonaChanSync(u chan chan chan chan chan chan int) chan chan chan int {
 
 // [[u(x1,..,xn).P]]=u(z).z(x1)...z(xn).[[P]]
 func recvPolySync(u chan chan chan chan chan chan int, xs []int) {
-	// z := <-u // u(z)
-	z := recvMonaChanSync(u)
+	z := recvMonaChanSync(u) // u(z)
 	fmt.Printf("recvPolySync: z=%p <- u=%p\n", z, u)
 
 	// z(x1)...z(xn).[[P]]

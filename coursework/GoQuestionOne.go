@@ -1,4 +1,10 @@
 /*
+ * In this question, we simulate the interaction between two clients and the FTP server in paralle.
+ * One client will go for the correct user ID and password combination. Therefore, we should observe
+ * "Welcome, <user_id>!" printed, where <user_id> is "userid" in this case. After that, a sequence of
+ * actions is taken, which is 3 gets, 3 puts and bye. At the same time, another client types
+ * incorrect user ID and password. "Sorry! User ID or password is incorrect." should be printed.
+ * For the purpose of concision, we create a function for each process.
  */
 
 package main
@@ -51,7 +57,6 @@ func Client(pid chan chan ClientChan, loginInfo ClientAccount) {
 	case <-authAlts[0]: // sorry: 0
 		fmt.Println("Client: Sorry! User ID or password is incorrect.")
 	case <-authAlts[1]: // welcome: s <| get.s <| get.s <| get.s <| put.s <| put.s <| put.s <| bye
-		fmt.Println()
 		fmt.Printf("Client: Welcome, %s!\n", loginInfo.userid)
 		var r int
 		actAlts[0] <- r
