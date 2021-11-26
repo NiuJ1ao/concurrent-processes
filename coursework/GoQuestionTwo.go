@@ -98,59 +98,49 @@ func directEncoding(vs []int) {
 func sendMonaValSync(u chan chan chan int, v int) {
 	c := make(chan chan int, 1) // (νc)
 	atomic.AddUint32(&chan_counter, 1)
-	fmt.Printf("sendMonaSync: (nu c=%p)\n", c)
 
 	// u<c>
 	go func() {
 		u <- c
 		atomic.AddUint32(&msg_counter, 1)
 	}()
-	fmt.Printf("sendMonaSync: u=%p <- c=%p\n", u, c)
 
 	y := <-c // c(y)
-	fmt.Printf("sendMonaSync: y=%p <- c=%p\n", y, c)
 
 	// (y<v>|[[P]])
 	go func() {
 		y <- v
 		atomic.AddUint32(&msg_counter, 1)
 	}()
-	fmt.Printf("sendMonaSync: y=%p <- v=%d\n", y, v)
 }
 
 // [[u<v>.P]]= (νc)(u<c>|c(y).(y<v>|[[P]]))
 func sendMonaChanSync(u chan chan chan chan chan chan int, v chan chan chan int) {
 	c := make(chan chan chan chan chan int, 1) // (νc)
 	atomic.AddUint32(&chan_counter, 1)
-	fmt.Printf("sendMonaSync: (nu c=%p)\n", c)
 
 	// u<c>
 	go func() {
 		u <- c
 		atomic.AddUint32(&msg_counter, 1)
 	}()
-	fmt.Printf("sendMonaSync: u=%p <- c=%p\n", u, c)
 
 	y := <-c // c(y)
-	fmt.Printf("sendMonaSync: y=%p <- c=%p\n", y, c)
 
 	// (y<v>|[[P]])
 	go func() {
 		y <- v
 		atomic.AddUint32(&msg_counter, 1)
 	}()
-	fmt.Printf("sendMonaSync: y=%p <- v=%d\n", y, v)
 }
 
 // [[u<v1,..,vn>.P]]= (νc)u<c>.c<v1>...c<vn>.[[P]]
 func sendPolySync(u chan chan chan chan chan chan int, vs []int) {
 	c := make(chan chan chan int, 1) // (νc)
 	atomic.AddUint32(&chan_counter, 1)
-	fmt.Printf("sendPolySync: (nu c=%p)\n", c)
 
 	sendMonaChanSync(u, c) // u<c>
 	atomic.AddUint32(&msg_counter, 1)
-	fmt.Printf("sendPolySync: u=%p <- c=%p\n", u, c)
 
 	// c<v1>...c<vn>.[[P]]
 	for _, v := range vs {
@@ -161,21 +151,17 @@ func sendPolySync(u chan chan chan chan chan chan int, vs []int) {
 // [[u(x).P]]=u(y).(νd)(y<d>|d(x).[[P]])
 func recvMonaValSync(u chan chan chan int) int {
 	y := <-u // u(y)
-	fmt.Printf("recvMonaSync: y=%d <- u=%p\n", y, u)
 
 	d := make(chan int, 1) // (νd)
 	atomic.AddUint32(&chan_counter, 1)
-	fmt.Printf("recvMonaSync: (nu d=%p)\n", d)
 
 	// y<d>
 	go func() {
 		y <- d
 		atomic.AddUint32(&msg_counter, 1)
 	}()
-	fmt.Printf("recvMonaSync: y=%d <- d=%p\n", y, d)
 
 	x := <-d // d(x).[[P]]
-	fmt.Printf("recvMonaSync: x=%d <- d=%p\n", x, d)
 
 	return x
 }
@@ -183,21 +169,17 @@ func recvMonaValSync(u chan chan chan int) int {
 // [[u(x).P]]=u(y).(νd)(y<d>|d(x).[[P]])
 func recvMonaChanSync(u chan chan chan chan chan chan int) chan chan chan int {
 	y := <-u // u(y)
-	fmt.Printf("recvMonaSync: y=%d <- u=%p\n", y, u)
 
 	d := make(chan chan chan chan int, 1) // (νd)
 	atomic.AddUint32(&chan_counter, 1)
-	fmt.Printf("recvMonaSync: (nu d=%p)\n", d)
 
 	// y<d>
 	go func() {
 		y <- d
 		atomic.AddUint32(&msg_counter, 1)
 	}()
-	fmt.Printf("recvMonaSync: y=%d <- d=%p\n", y, d)
 
 	x := <-d // d(x).[[P]]
-	fmt.Printf("recvMonaSync: x=%d <- d=%p\n", x, d)
 
 	return x
 }
@@ -205,7 +187,6 @@ func recvMonaChanSync(u chan chan chan chan chan chan int) chan chan chan int {
 // [[u(x1,..,xn).P]]=u(z).z(x1)...z(xn).[[P]]
 func recvPolySync(u chan chan chan chan chan chan int, xs []int) {
 	z := recvMonaChanSync(u) // u(z)
-	fmt.Printf("recvPolySync: z=%p <- u=%p\n", z, u)
 
 	// z(x1)...z(xn).[[P]]
 	for i := 0; i < len(xs); i++ {
